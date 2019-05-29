@@ -47,10 +47,26 @@ Tenga en cuenta que `.Auth()` es el módulo a instancear.
 El módulo `Auth` maneja eventos globales que son disparados en diversos tiempos de ejecución del código. Los eventos globales
 son los siguientes:
 
-- `start`: Este evento se ejecuta antes de iniciar cualquier validación de autenticación.  
-- `connect`: Este evento se ejecuta si el usuario **se autenticó de manera** correcta o tiene sesión iniciada.
-- `disconnec`: Este evento se ejecuta si el usuario **no está autenticado o si la autenticación falló**.
+- `start`: Este evento se ejecuta antes de iniciar cualquier validación, registro o autenticación. 
+Se ejecuta en los métodos `CheckLogin`, `MakeLogin`, `MakeRegister`.     
+
+- `connect`: Este evento se ejecuta si el usuario _se autenticó de manera correcta o tiene sesión iniciada_. 
+Se ejecuta en los métodos `CheckLogin`, `MakeLogin`.
+
+- `disconnec`: Este evento se ejecuta si el usuario _no está autenticado o si la autenticación falló_.
+Se ejecuta en los métodos `CheckLogin`, `MakeLogin`.
+
 - `finish`: Este evento se ejecuta al finalizar toda petición de verificación o autenticación de usuario.
+Se ejecuta en los métodos `CheckLogin`, `MakeLogin`, `MakeRegister`.
+
+- `error`: Este evento se ejecuta si la petición o validación realizada falló.
+Se ejecuta en los métodos `CheckLogin`, `MakeLogin`, `MakeRegister`.
+
+- `register_success`: Este evento se ejecuta cuando se realizó un registro de usuario exitoso.
+Se ejecuta en los métodos `MakeRegister`.
+
+- `register_fail`: Este evento se ejecuta cuando el registro de usuario falla.
+Se ejecuta en los métodos `MakeRegister`.
 
 > Los eventos globales se configuran por medio del método `Event`.
 
@@ -58,7 +74,7 @@ son los siguientes:
 ### Métodos disponibles
 
 #### `Event`
-El método event configura los **eventos globales**, recibe los siguientes parámetros:
+El método `Event` configura los **eventos globales**, recibe los siguientes parámetros:
 
 - `event` _(String)_: Nombre del evento 
 - `callbackEvent` _(Function)_: Callback a ejecutar cuando el evento sea disparado.
@@ -75,7 +91,7 @@ una_variable.Event("start", () => {
 
 
 #### `EventTrigger`
-El método EventTrigger ejecuta directamente cualquiera de los **eventos globales** disponibles, recibe los siguientes parametros:
+El método `EventTrigger` ejecuta directamente cualquiera de los **eventos globales** disponibles, recibe los siguientes parametros:
 
 - `event` _(String)_: Nombre del evento
 
@@ -90,7 +106,7 @@ una_variable.EventTrigger("start");
 
 
 #### `CheckLogin`
-El método CheckLogin valida si un usuario está autenticado o con sesión iniciada. Recibe los siguientes parametros:
+El método `CheckLogin` valida si un usuario está autenticado o con sesión iniciada. Recibe los siguientes parametros:
 
 - `eventsOnGo` _(Object)_: Arbol de eventos "On Go".
 
@@ -104,7 +120,7 @@ una_variable.CheckLogin({
 ```
 
 #### `MakeLogin`
-El método MakeLogin autentica a un usuario. Recibe los siguientes parametros:
+El método `MakeLogin` autentica a un usuario. Recibe los siguientes parametros:
 
 - `user` _(String)_: Nombre de usuario (correo electrónico).
 - `password` _(String)_: Contraseña del usuario.
@@ -120,7 +136,7 @@ una_variable.MakeLogin(user, password, {
 ```
 
 #### `MakeLogout`
-El método MakeLogout cerrará la sesión de un usuario autenticado, no recibe ningún parámetro y retornará `true o false`
+El método `MakeLogout` cerrará la sesión de un usuario autenticado, no recibe ningún parámetro y retornará `true o false`
 si el cierre de sesión se realizó con éxito.
 
 
@@ -130,7 +146,7 @@ plconnect.MakeLogout();
 ```
 
 #### `MakeRegister`
-El método MakeRegister registra a usuarios nuevos e inicia sesión automáticamente si el registro fué exitoso. Recibe los siguientes parametros:
+El método `MakeRegister` registra a usuarios nuevos e inicia sesión (con el usuario nuevo) automáticamente si el registro fué exitoso. Recibe los siguientes parametros:
 
 - `user` _(String)_: Nombre de usuario (correo electrónico).
 - `password` _(String)_: Contraseña del usuario.
@@ -138,6 +154,15 @@ El método MakeRegister registra a usuarios nuevos e inicia sesión automáticam
 - `eventsOnGo` _(Object)_: Arbol de eventos "On Go".
 
 > Este método ejecutará eventos globales y eventos "On Go" automáticamente.
+
+
+#### `EnableRecaptcha`
+El método `EnableRecaptcha` habilita [recaptcha v.3.0 by Google](https://developers.google.com/recaptcha/docs/v3). 
+Si este método es llamado, se enviará automáticamente el token de recaptcha cuándo se invoquen los siguientes métodos de `PL_API.Auth()`:
+
+- `MakeRegister`
+ 
+No recibe ningún parámetro.
 
 
 #### Eventos "On Go"
@@ -158,7 +183,14 @@ El árbol de eventos "On Go" tiene la siguiente estructura:
   },
   'finish': () => {
     // ...
+  },
+  'register_fail': () => {
+    // ...
+  },
+  'register_success': () => {
+    // ...
   }
+  ... O cualquier evento disponible que el método admita.
 }
 ```
 

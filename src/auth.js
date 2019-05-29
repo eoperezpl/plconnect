@@ -2,6 +2,8 @@ export default class Auth {
 
     constructor() {
 
+        this.recaptcha_token = false;
+
         //Default events
         this.events = {
             start: {
@@ -17,6 +19,18 @@ export default class Auth {
                 msg_error: "Event -> disconnect callback is not function"
             },
             finish: {
+                callback: () => {},
+                msg_error: "Event -> finish callback is not function"
+            },
+            error: {
+                callback: () => {},
+                msg_error: "Event -> error callback is not function"
+            },
+            register_success: {
+                callback: () => {},
+                msg_error: "Event -> finish callback is not function"
+            },
+            register_fail: {
                 callback: () => {},
                 msg_error: "Event -> finish callback is not function"
             }
@@ -56,7 +70,9 @@ export default class Auth {
             }
         };
 
-        this.DoPOST = (url, data, callback) => {
+        this.DoPOST = (url, data, callback, eventsOnGo) => {
+
+            if(!eventsOnGo) eventsOnGo = {};
 
             fetch(url, {
                 method: 'POST',
@@ -75,12 +91,13 @@ export default class Auth {
                   callback(response);
               })
               .catch((err) => {
-                  console.error(err);
+                  this.EventTrigger("error");
+                  this.execEventOnGo("error", eventsOnGo);
               });
         };
 
         this.SendMsg = (msg) => {
-            console.log(msg);
+            console.log(`PL_API Says: ${msg}`);
         };
 
         this.execEventOnGo = (eventName, eventOnGoTree) => {
@@ -173,8 +190,85 @@ export default class Auth {
         }
     };
 
+    EnableRecaptcha() {
+        // Create script for google
+        var s = document.createElement("script");
+        s.type = "text/javascript";
+        s.src = "https://www.google.com/recaptcha/api.js?render=6LcL9qMUAAAAAKrMzirXeGXdcBRsnPzf7T4Zlmy1";
+        s.onload = () => {
+            setTimeout(()=>{
+                grecaptcha.ready(() => {
+                    grecaptcha.execute('6LcL9qMUAAAAAKrMzirXeGXdcBRsnPzf7T4Zlmy1', {action: 'homepage'}).then((token) => {
+                        this.SendMsg("Recaptcha Enabled");
+                        this.recaptcha_token = token;
+                    });
+                });
+            }, 500);
+        };
+        var head = document.getElementsByTagName("head");
+
+        // If head is ok, add script
+        if (typeof head[0] !== "undefined") {
+            head[0].appendChild(s);
+        }
+    }
+
+    EnableSocialLogin(id_container_buttons) {
+
+        var container = document.getElementById(id_container_buttons);
+
+        // Create buttons
+        var fb_button = document.createElement("button");
+        fb_button.innerHTML = "FB";
+        container.appendChild(fb_button);
+
+        // Facebook SDK
+        var s = document.createElement("script");
+        s.async = "true";
+        s.defer = "defer";
+        s.type = "text/javascript";
+        s.src = "https://connect.facebook.net/en_US/sdk.js";
+        s.onload = () => {
+
+            // Start fb
+            window.fbAsyncInit = function() {
+                FB.init({
+                    appId            : '1712939795618034',
+                    autoLogAppEvents : true,
+                    xfbml            : true,
+                    version          : 'v3.3'
+                });
+            };
+
+            // Add event to fb
+            fb_button.addEventListener("click", () => {
+                console.log("lalala");
+                FB.getLoginStatus((response) => {
+                    if (typeof response.status !== "undefined") {
+                        if (response.status === "connected") {
+                            console.log(response.authResponse.userID);
+                        }
+                        else{
+
+                        }
+                    }
+                    else {
+
+                    }
+                })
+            });
+        };
+        var head = document.getElementsByTagName("head");
+        // If head is ok, add script
+        if (typeof head[0] !== "undefined") {
+            head[0].appendChild(s);
+        }
+    }
+
     MakeLogin(user, password, eventsOnGo) {
 
+        if(!user) user = "";
+        if(!password) password = "";
         if(!eventsOnGo) eventsOnGo = {};
 
         this.EventTrigger("start");
@@ -202,7 +296,37 @@ export default class Auth {
         return this.UnsetAuthToken();
     }
 
-    MakeRegister() {
+    MakeRegister(user, password, password_confirm, eventsOnGo) {
 
+        if(!user) user = "";
+        if(!password) password = "";
+        if(!password_confirm) password_confirm = "";
+        if(!eventsOnGo) eventsOnGo = {};
+
+        this.EventTrigger("start");
+        this.execEventOnGo("start", eventsOnGo);
+
+        const dataSend = {};
+        dataSend.user = user;
+        dataSend.password = password;
+        dataSend.password_confirm = password_confirm;
+        dataSend.recaptcha_token = this.recaptcha_token;
+
+        this.DoPOST(this.primary_url + '/auth/register', dataSend, (data) => {
+
+            if (typeof data.auth !== "undefined") {
+                if (data.auth === 1) {
+                    this.SetAuthToken(data.token);
+                    this.EventTrigger("register_success");
+                    this.execEventOnGo("register_success", eventsOnGo);
+                }
+                else {
+                    this.EventTrigger("register_fail");
+                    this.execEventOnGo("register_fail", eventsOnGo);
+                }
+            }
+            this.EventTrigger("finish");
+            this.execEventOnGo("finish", eventsOnGo);
+        }, eventsOnGo);
     }
 }
