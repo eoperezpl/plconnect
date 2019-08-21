@@ -146,6 +146,7 @@ export default class Auth {
                   callback(response);
               })
               .catch((err) => {
+                  this.SendMsg(err);
                   this.EventTrigger("error");
                   this.execEventOnGo("error", eventsOnGo);
               });
@@ -158,8 +159,10 @@ export default class Auth {
         this.execEventOnGo = (eventName, eventOnGoTree, params) => {
             if(!params) params = false;
             if(typeof eventOnGoTree[eventName] !== "undefined") {
+                console.log("sdfsdfsd");
                 const token = this.FindAuthToken();
                 if(!params) params = this.parseJwt(token);
+
                 eventOnGoTree[eventName](params);
             }
         };
@@ -502,7 +505,7 @@ export default class Auth {
             this.EventTrigger("start");
 
             // Load Facebook SDK
-            var s = document.createElement("script");
+            const s = document.createElement("script");
             s.async = "true";
             s.defer = "defer";
             s.type = "text/javascript";
