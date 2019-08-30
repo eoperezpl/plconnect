@@ -152,6 +152,37 @@ export default class Auth {
               });
         };
 
+        this.DoGET = (url, data, callback, eventsOnGo) => {
+
+            // If is an get request, DONT SEND TOKEN
+
+            if(!eventsOnGo) eventsOnGo = {};
+
+            let query = Object.keys(data).map(k => encodeURIComponent(k) + '=' + encodeURIComponent(data[k])).join('&');
+
+            fetch(url+"?"+query, {
+                method: 'GET',
+                mode: 'cors',
+                headers: new Headers(
+                  {
+                      'Content-Type': 'application/json',
+                      'Access-Control-Allow-Origin':'*'
+                  }),
+                cache: 'no-cache',
+            })
+              .then((response) => {
+                  return response.json();
+              })
+              .then((response) => {
+                  callback(response);
+              })
+              .catch((err) => {
+                  this.SendMsg(err);
+                  this.EventTrigger("error");
+                  this.execEventOnGo("error", eventsOnGo);
+              });
+        };
+
         this.SendMsg = (msg) => {
             console.log(`PL_API Says: ${msg}`);
         };
@@ -335,8 +366,9 @@ export default class Auth {
         }
     };
 
-    RedirectToBackURL() {
+    RedirectToBackURL(urlBack) {
         // If the back url is ok, redirect
+        if(!urlBack) urlBack = false;
         const backUrl = this.FindAuthBack();
 
         if (backUrl !== "" && backUrl !== "false" && backUrl !== false) {
@@ -345,7 +377,8 @@ export default class Auth {
             this.SetAuthBack("");
             window.location.href = this.getValidUrl(backUrl);
         }
-        else{
+        else {
+            window.location.href = this.getValidUrl(urlBack);
             this.SendMsg("URL Back is not config");
         }
     }
