@@ -190,7 +190,6 @@ export default class Auth {
         this.execEventOnGo = (eventName, eventOnGoTree, params) => {
             if(!params) params = false;
             if(typeof eventOnGoTree[eventName] !== "undefined") {
-                console.log("sdfsdfsd");
                 const token = this.FindAuthToken();
                 if(!params) params = this.parseJwt(token);
 
