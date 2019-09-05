@@ -728,8 +728,10 @@ export default class Auth {
         });
     }
 
-    MakeLogout() {
-        return this.UnsetAuthToken();
+    MakeLogout(eventsOnGo) {
+        const disconnect = this.UnsetAuthToken();
+        this.EventTrigger("disconnect");
+        return disconnect;
     }
 
     MakeRegister(user, password, password_confirm, name, lastname, eventsOnGo) {
@@ -774,5 +776,15 @@ export default class Auth {
             this.EventTrigger("finish");
             this.execEventOnGo("finish", eventsOnGo);
         }, eventsOnGo);
+    }
+
+    GetUserID() {
+        const token = this.parseJwt(this.FindAuthToken());
+        if(typeof token.sub !== "undefined") {
+            return token.sub;
+        }
+        else{
+            return 0;
+        }
     }
 }
