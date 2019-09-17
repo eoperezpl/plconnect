@@ -697,16 +697,17 @@ export default class Auth {
         }
     }
 
-    MakeLogin(user, password, eventsOnGo) {
+    MakeLogin(user, password, keep_session, eventsOnGo) {
 
         if(!user) user = "";
         if(!password) password = "";
+        if(!keep_session) keep_session = false;
         if(!eventsOnGo) eventsOnGo = {};
 
         this.EventTrigger("start");
         this.execEventOnGo("start", eventsOnGo);
 
-        this.DoPOST(this.primary_url + '/auth/login', {user: user, password: password}, (data) => {
+        this.DoPOST(this.primary_url + '/auth/login', {user: user, password: password, keep_session: keep_session}, (data) => {
 
             if (typeof data.auth !== "undefined") {
                 if (data.auth === 1) {
