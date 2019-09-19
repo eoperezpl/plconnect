@@ -1,3 +1,6 @@
+
+import Fingerprint from 'fingerprintjs2';
+
 export default class Auth {
 
     constructor() {
@@ -135,6 +138,8 @@ export default class Auth {
 
         this.DoPOST = (url, data, callback, eventsOnGo) => {
 
+            const self = this;
+
             // autoset token
             if(typeof data["token"] === "undefined") {
                 data["token"] = this.FindAuthToken();
@@ -142,28 +147,37 @@ export default class Auth {
 
             if(!eventsOnGo) eventsOnGo = {};
 
-            fetch(url, {
-                method: 'POST',
-                mode: 'cors',
-                headers: new Headers(
-                  {
-                      'Content-Type': 'application/json',
-                      'Access-Control-Allow-Origin':'*'
-                  }),
-                cache: 'no-cache',
-                body: JSON.stringify(data)
-            })
-              .then((response) => {
-                  return response.json();
-              })
-              .then((response) => {
-                  callback(response);
-              })
-              .catch((err) => {
-                  this.SendMsg(err);
-                  this.EventTrigger("error");
-                  this.execEventOnGo("error", eventsOnGo);
-              });
+            Fingerprint.get(function (components) {
+
+                const fingerprintValues = components.map(function (component) { return component.value });
+                data["fingerprint"] = Fingerprint.x64hash128(fingerprintValues.join(''), 31);
+
+                // fetch
+                fetch(url, {
+                    method: 'POST',
+                    mode: 'cors',
+                    headers: new Headers(
+                        {
+                            'Content-Type': 'application/json',
+                            'Access-Control-Allow-Origin':'*'
+                        }),
+                    cache: 'no-cache',
+                    body: JSON.stringify(data)
+                })
+                    .then((response) => {
+                        return response.json();
+                    })
+                    .then((response) => {
+                        callback(response);
+                    })
+                    .catch((err) => {
+                        self.SendMsg(err);
+                        self.EventTrigger("error");
+                        self.execEventOnGo("error", eventsOnGo);
+                    });
+            });
+
+
         };
 
         this.DoGET = (url, data, callback, eventsOnGo) => {
@@ -248,12 +262,18 @@ export default class Auth {
         const urlParams = new URLSearchParams(window.location.search);
         const back_uri = urlParams.get('back');
         const skip_polls = urlParams.get('skip_polls');
+        const tsso = urlParams.get('tsso');
+
+        console.log(tsso);
 
         if (skip_polls !== null) {
             this.SetSkipPolls(1);
         }
         if (back_uri !== null) {
             this.SetAuthBack(back_uri);
+        }
+        if (tsso !== null) {
+            this.SetAuthToken(tsso);
         }
 
         // Singleton in window
@@ -335,6 +355,7 @@ export default class Auth {
 
         // If token exists
         if (token) {
+
             this.DoPOST(this.primary_url + '/auth/check', {token: token}, (data) => {
 
                 if (typeof data.auth !== "undefined") {
@@ -389,11 +410,13 @@ export default class Auth {
     RedirectToBackURL(urlBack) {
         // If the back url is ok, redirect
         if(!urlBack) urlBack = false;
-        const backUrl = this.FindAuthBack();
+        let backUrl = this.FindAuthBack();
+        const token = this.FindAuthToken();
 
-        var pattern = /^((http|https|ftp):\/\/)/;
+        const urlHasVars = (backUrl.indexOf("?") > -1);
+        const pattern = /^((http|https|ftp):\/\/)/;
 
-        if (backUrl !== "" && backUrl !== "false" && backUrl !== false && backUrl) {
+        if (backUrl !== "" && backUrl !== "false" && backUrl) {
             // clear authback
             this.SendMsg("Redirecting to \""+backUrl+"\".");
             this.SetAuthBack("");
@@ -402,7 +425,9 @@ export default class Auth {
                 window.location.href = backUrl;
             }
             else{
-                window.location.href = this.getValidUrl(backUrl);
+                let uriSend = this.getValidUrl(backUrl);
+                const url = uriSend+((urlHasVars)?("&tsso="+token):("?tsso="+token));
+                window.location.href = url;
             }
         }
         else {
