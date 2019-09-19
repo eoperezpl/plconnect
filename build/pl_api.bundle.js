@@ -152,6 +152,7 @@ function () {
     this.auth_id = "0f07e8e38a7b56f90912b3d0d874f7e7";
     this.auth_socials = "5f27a8efzc452v7b56f90912bcdpoeRe5";
     this.auth_back = "932dfaf278s5f8t5h4sdf6348fzbcml4f";
+    this.skip_polls = "Z325ffa277s0f3t5N4sdO664pfznyml45";
     this.auth_accounts = "68s5f47w8s5f4asc25sdfa3sdf87cxgpeb";
 
     this.FindAuthToken = function () {
@@ -167,6 +168,21 @@ function () {
 
     this.SetAuthToken = function (token) {
       localStorage.setItem(_this.auth_id, btoa(token));
+    };
+
+    this.FindSkipPolls = function () {
+      var response = false;
+      var skip = localStorage.getItem(_this.skip_polls);
+
+      if (skip !== null) {
+        response = skip;
+      }
+
+      return response;
+    };
+
+    this.SetSkipPolls = function (skip) {
+      localStorage.setItem(_this.skip_polls, skip);
     };
 
     this.FindAuthBack = function () {
@@ -335,6 +351,11 @@ function () {
 
     var urlParams = new URLSearchParams(window.location.search);
     var back_uri = urlParams.get('back');
+    var skip_polls = urlParams.get('skip_polls');
+
+    if (skip_polls !== null) {
+      this.SetSkipPolls(1);
+    }
 
     if (back_uri !== null) {
       this.SetAuthBack(back_uri);
@@ -428,10 +449,13 @@ function () {
           if (typeof data.auth !== "undefined") {
             if (data.auth === 1) {
               // save account logged
-              _this2.AccountSave(data.email, data.name + " " + data.lastname); // Check polls
+              _this2.AccountSave(data.email, data.name + " " + data.lastname); // find skip polls
 
 
-              if (typeof data.polls !== "undefined") {
+              var skip = _this2.FindSkipPolls(); // Check polls
+
+
+              if (typeof data.polls !== "undefined" && !skip) {
                 // Fire events
                 _this2.SendMsg("** User has polls **");
 
@@ -478,14 +502,20 @@ function () {
       // If the back url is ok, redirect
       if (!urlBack) urlBack = false;
       var backUrl = this.FindAuthBack();
+      var pattern = /^((http|https|ftp):\/\/)/;
 
-      if (backUrl !== "" && backUrl !== "false" && backUrl !== false) {
+      if (backUrl !== "" && backUrl !== "false" && backUrl !== false && backUrl) {
         // clear authback
         this.SendMsg("Redirecting to \"" + backUrl + "\".");
         this.SetAuthBack("");
-        window.location.href = this.getValidUrl(backUrl);
+
+        if (!pattern.test(backUrl)) {
+          window.location.href = backUrl;
+        } else {
+          window.location.href = this.getValidUrl(backUrl);
+        }
       } else {
-        window.location.href = this.getValidUrl(urlBack);
+        //window.location.href = this.getValidUrl(urlBack);
         this.SendMsg("URL Back is not config");
       }
     }

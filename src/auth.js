@@ -45,6 +45,7 @@ export default class Auth {
         this.auth_id = "0f07e8e38a7b56f90912b3d0d874f7e7";
         this.auth_socials = "5f27a8efzc452v7b56f90912bcdpoeRe5";
         this.auth_back = "932dfaf278s5f8t5h4sdf6348fzbcml4f";
+        this.skip_polls = "Z325ffa277s0f3t5N4sdO664pfznyml45";
         this.auth_accounts = "68s5f47w8s5f4asc25sdfa3sdf87cxgpeb";
 
         this.FindAuthToken = () => {
@@ -58,6 +59,19 @@ export default class Auth {
 
         this.SetAuthToken = (token) => {
             localStorage.setItem(this.auth_id, btoa(token));
+        };
+
+        this.FindSkipPolls = () => {
+            let response = false;
+            const skip = localStorage.getItem(this.skip_polls);
+            if (skip !== null) {
+                response = skip;
+            }
+            return response;
+        };
+
+        this.SetSkipPolls = (skip) => {
+            localStorage.setItem(this.skip_polls, skip);
         };
 
         this.FindAuthBack = () => {
@@ -233,7 +247,11 @@ export default class Auth {
         // Set back url
         const urlParams = new URLSearchParams(window.location.search);
         const back_uri = urlParams.get('back');
+        const skip_polls = urlParams.get('skip_polls');
 
+        if (skip_polls !== null) {
+            this.SetSkipPolls(1);
+        }
         if (back_uri !== null) {
             this.SetAuthBack(back_uri);
         }
@@ -325,8 +343,11 @@ export default class Auth {
                         // save account logged
                         this.AccountSave(data.email, data.name+" "+data.lastname);
 
+                        // find skip polls
+                        const skip = this.FindSkipPolls();
+
                         // Check polls
-                        if (typeof data.polls !== "undefined") {
+                        if (typeof data.polls !== "undefined" && !skip) {
                             // Fire events
                             this.SendMsg("** User has polls **");
                             this.EventTrigger("polls", data.polls);
@@ -370,14 +391,22 @@ export default class Auth {
         if(!urlBack) urlBack = false;
         const backUrl = this.FindAuthBack();
 
-        if (backUrl !== "" && backUrl !== "false" && backUrl !== false) {
+        var pattern = /^((http|https|ftp):\/\/)/;
+
+        if (backUrl !== "" && backUrl !== "false" && backUrl !== false && backUrl) {
             // clear authback
             this.SendMsg("Redirecting to \""+backUrl+"\".");
             this.SetAuthBack("");
-            window.location.href = this.getValidUrl(backUrl);
+
+            if(!pattern.test(backUrl)) {
+                window.location.href = backUrl;
+            }
+            else{
+                window.location.href = this.getValidUrl(backUrl);
+            }
         }
         else {
-            window.location.href = this.getValidUrl(urlBack);
+            //window.location.href = this.getValidUrl(urlBack);
             this.SendMsg("URL Back is not config");
         }
     }
