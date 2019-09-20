@@ -45,6 +45,7 @@
         "url": "https://github.com/piecioshka/boilerplate-babel-webpack"
     },
     "dependencies": {
+        "cross-storage": "^1.0.0",
         "fingerprintjs2": "^2.1.0"
     }
 }
