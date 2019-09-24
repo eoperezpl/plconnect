@@ -2431,7 +2431,6 @@ function () {
       var self = _this; // Update hub only works with sso because all domains is only read
 
       if (window.location.hostname === _this.sso_domain) {
-        console.log("saved to hub:" + JSON.stringify(self.data));
         localStorage.setItem('sso-data', JSON.stringify(self.data));
         /*const storage = new CrossStorageClient(this.hub_url);
         storage.onConnect().then(function() {
