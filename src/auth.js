@@ -126,7 +126,6 @@ export default class Auth {
             // Update hub only works with sso because all domains is only read
             if (window.location.hostname === this.sso_domain) {
                 localStorage.setItem('sso-data', JSON.stringify(self.data));
-                console.log("saved hub");
 
                 /*const storage = new CrossStorageClient(this.hub_url);
                 storage.onConnect().then(function() {
@@ -167,7 +166,7 @@ export default class Auth {
 
         // Save the skip polls in storage
         this.SetSkipPolls = (skip) => {
-            this.data.skip_polls = "";
+            this.data.skip_polls = skip;
             this.UpdateHub();
         };
 
@@ -179,7 +178,7 @@ export default class Auth {
         };
 
         this.SetAuthBack = (back) => {
-            this.data.back = "";
+            this.data.back = back;
             this.UpdateHub();
         };
 
@@ -358,11 +357,13 @@ export default class Auth {
         }
         window.PlConnectApiInstance = this;
 
+        // Get hub data
+        this.GetHub();
+
         // Set back url
         const urlParams = new URLSearchParams(window.location.search);
         const back_uri = urlParams.get('back');
         const skip_polls = urlParams.get('skip_polls');
-        const tsso = urlParams.get('tsso');
 
         // Set skip polls
         if (skip_polls !== null) {
@@ -372,13 +373,6 @@ export default class Auth {
         if (back_uri !== null) {
             this.SetAuthBack(back_uri);
         }
-        // Set tsso
-        /*if (tsso !== null) {
-            this.SetAuthToken(tsso);
-        }*/
-
-        // Get hub data
-        this.GetHub();
     }
 
     // Find saved accounts in device
@@ -532,9 +526,7 @@ export default class Auth {
                 window.location.href = backUrl;
             }
             else{
-                let uriSend = this.getValidUrl(backUrl);
-                const url = uriSend+((urlHasVars)?("&tsso="+token):("?tsso="+token));
-                window.location.href = url;
+                window.location.href = this.getValidUrl(backUrl);
             }
         }
         else {

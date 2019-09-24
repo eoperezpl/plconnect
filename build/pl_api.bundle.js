@@ -2431,8 +2431,8 @@ function () {
       var self = _this; // Update hub only works with sso because all domains is only read
 
       if (window.location.hostname === _this.sso_domain) {
+        console.log("saved to hub:" + JSON.stringify(self.data));
         localStorage.setItem('sso-data', JSON.stringify(self.data));
-        console.log("saved hub");
         /*const storage = new CrossStorageClient(this.hub_url);
         storage.onConnect().then(function() {
             return storage.set('sso-data', JSON.stringify(self.data));
@@ -2476,7 +2476,7 @@ function () {
 
 
     this.SetSkipPolls = function (skip) {
-      _this.data.skip_polls = "";
+      _this.data.skip_polls = skip;
 
       _this.UpdateHub();
     };
@@ -2490,7 +2490,7 @@ function () {
     };
 
     this.SetAuthBack = function (back) {
-      _this.data.back = "";
+      _this.data.back = back;
 
       _this.UpdateHub();
     };
@@ -2657,12 +2657,13 @@ function () {
       return window.PlConnectApiInstance;
     }
 
-    window.PlConnectApiInstance = this; // Set back url
+    window.PlConnectApiInstance = this; // Get hub data
+
+    this.GetHub(); // Set back url
 
     var urlParams = new URLSearchParams(window.location.search);
     var back_uri = urlParams.get('back');
-    var skip_polls = urlParams.get('skip_polls');
-    var tsso = urlParams.get('tsso'); // Set skip polls
+    var skip_polls = urlParams.get('skip_polls'); // Set skip polls
 
     if (skip_polls !== null) {
       this.SetSkipPolls(1);
@@ -2671,15 +2672,7 @@ function () {
 
     if (back_uri !== null) {
       this.SetAuthBack(back_uri);
-    } // Set tsso
-
-    /*if (tsso !== null) {
-        this.SetAuthToken(tsso);
-    }*/
-    // Get hub data
-
-
-    this.GetHub();
+    }
   } // Find saved accounts in device
 
 
@@ -2838,9 +2831,7 @@ function () {
         if (!pattern.test(backUrl)) {
           window.location.href = backUrl;
         } else {
-          var uriSend = this.getValidUrl(backUrl);
-          var url = uriSend + (urlHasVars ? "&tsso=" + token : "?tsso=" + token);
-          window.location.href = url;
+          window.location.href = this.getValidUrl(backUrl);
         }
       } else {
         //window.location.href = this.getValidUrl(urlBack);
