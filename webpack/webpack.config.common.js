@@ -6,6 +6,7 @@ module.exports = {
     entry: {
         main: path.resolve('./src/main.js')
     },
+    devtool: "source-map",
     output: {
         filename: 'pl_api.bundle.js',
         path: path.resolve('./build'),
