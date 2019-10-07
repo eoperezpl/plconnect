@@ -470,10 +470,6 @@ export default class Auth {
                             this.EventTrigger("polls", data.polls);
                             this.execEventOnGo("polls", eventsOnGo, data.polls);
                         }
-                        else{
-                            // Redirect to back
-                            this.RedirectToBackURL();
-                        }
                         // Fire events
                         this.SendMsg("** User connected **");
                         this.EventTrigger("connect");
@@ -585,10 +581,14 @@ export default class Auth {
                         else {
                             this.EventTrigger("register_fail");
                             this.execEventOnGo("register_fail", eventsOnGo);
+                            this.EventTrigger("finish");
+                            this.execEventOnGo("finish", eventsOnGo);
                         }
                     }
-                    this.EventTrigger("finish");
-                    this.execEventOnGo("finish", eventsOnGo);
+                    else {
+                        this.EventTrigger("finish");
+                        this.execEventOnGo("finish", eventsOnGo);
+                    }
                 });
             };
 
@@ -737,8 +737,9 @@ export default class Auth {
                     }
                     else {
                         this.SendMsg("Error with facebook requests");
+                        self.EventTrigger("finish");
                     }
-                    self.EventTrigger("finish");
+                    // self.EventTrigger("finish");
                 });
             };
             // If head is ok, add script
@@ -765,7 +766,9 @@ export default class Auth {
                         window.location.href = data.response;
                     }
                 }
-                self.EventTrigger("finish");
+                else{
+                    self.EventTrigger("finish");
+                }
             });
         }
         else if (social_network === "googleplus") {
@@ -813,9 +816,9 @@ export default class Auth {
                             }
                             catch(e) {
                                 self.SendMsg("Error to sign with Google");
+                                self.EventTrigger("finish");
                             }
                         });
-                        self.EventTrigger("finish");
                     });
                 });
             };
@@ -844,7 +847,9 @@ export default class Auth {
                         window.location.href = data.response;
                     }
                 }
-                self.EventTrigger("finish");
+                else{
+                    self.EventTrigger("finish");
+                }
             });
         }
         else{
