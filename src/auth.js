@@ -890,6 +890,41 @@ export default class Auth {
         });
     }
 
+    // Attempt to login with backend, if the login it's ok, create sessions.
+    MakePasswordRecover(user, eventsOnGo) {
+
+        if(!user) user = "";
+        if(!eventsOnGo) eventsOnGo = {};
+
+        this.EventTrigger("start");
+        this.execEventOnGo("start", eventsOnGo);
+
+        this.DoPOST(this.primary_url + '/auth/login', {user: user}, (data) => {
+
+            console.log(data);
+
+            /*
+            if (typeof data.auth !== "undefined") {
+                if (data.auth === 1) {
+                    this.SetAuthToken(data.token);
+                    // Validate token for security
+                    this.CheckLogin(eventsOnGo);
+                }
+                else {
+                    this.EventTrigger("disconnect");
+                    this.execEventOnGo("disconnect", eventsOnGo);
+                    this.EventTrigger("finish");
+                    this.execEventOnGo("finish", eventsOnGo);
+                }
+            }
+            else{
+                this.EventTrigger("finish");
+                this.execEventOnGo("finish", eventsOnGo);
+            }
+            */
+        });
+    }
+
     // Logout an user from app
     MakeLogout(eventsOnGo) {
 
@@ -968,6 +1003,8 @@ export default class Auth {
             {origin: /:\/\/(www\.)?guatevision.com$/, allow: access},
             {origin: /\.clasificadospl.com$/, allow: access},
             {origin: /:\/\/(www\.)?clasificadospl.com$/, allow: access},
+            {origin: /\.hagomitarea.com$/, allow: access},
+            {origin: /:\/\/(www\.)?hagomitarea.com$/, allow: access},
         ]);
     }
 
