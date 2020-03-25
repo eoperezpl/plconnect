@@ -1005,6 +1005,8 @@ export default class Auth {
             {origin: /:\/\/(www\.)?clasificadospl.com$/, allow: access},
             {origin: /\.hagomitarea.com$/, allow: access},
             {origin: /:\/\/(www\.)?hagomitarea.com$/, allow: access},
+            {origin: /\.revistaamiga.com$/, allow: access},
+            {origin: /:\/\/(www\.)?revistaamiga.com$/, allow: access},
         ]);
     }
 
