@@ -899,7 +899,7 @@ export default class Auth {
         this.EventTrigger("start");
         this.execEventOnGo("start", eventsOnGo);
 
-        this.DoPOST(this.primary_url + '/auth/login', {user: user}, (data) => {
+        this.DoPOST(this.primary_url + '/auth/recover-password', {user: user}, (data) => {
 
             console.log(data);
 
