@@ -70,6 +70,84 @@ export default class Auth {
         // Primary url for sso ws.
         this.primary_url = "https://foservices.prensalibre.com";
 
+        // Device detection
+        this.GetDeviceInfo = () => {
+            const module = {
+                options: [],
+                header: [navigator.platform, navigator.userAgent, navigator.appVersion, navigator.vendor, window.opera],
+                dataos: [
+                    { name: 'Windows Phone', value: 'Windows Phone', version: 'OS' },
+                    { name: 'Windows', value: 'Win', version: 'NT' },
+                    { name: 'iPhone', value: 'iPhone', version: 'OS' },
+                    { name: 'iPad', value: 'iPad', version: 'OS' },
+                    { name: 'Kindle', value: 'Silk', version: 'Silk' },
+                    { name: 'Android', value: 'Android', version: 'Android' },
+                    { name: 'PlayBook', value: 'PlayBook', version: 'OS' },
+                    { name: 'BlackBerry', value: 'BlackBerry', version: '/' },
+                    { name: 'Macintosh', value: 'Mac', version: 'OS X' },
+                    { name: 'Linux', value: 'Linux', version: 'rv' },
+                    { name: 'Palm', value: 'Palm', version: 'PalmOS' }
+                ],
+                databrowser: [
+                    { name: 'Chrome', value: 'Chrome', version: 'Chrome' },
+                    { name: 'Firefox', value: 'Firefox', version: 'Firefox' },
+                    { name: 'Safari', value: 'Safari', version: 'Version' },
+                    { name: 'Internet Explorer', value: 'MSIE', version: 'MSIE' },
+                    { name: 'Opera', value: 'Opera', version: 'Opera' },
+                    { name: 'BlackBerry', value: 'CLDC', version: 'CLDC' },
+                    { name: 'Mozilla', value: 'Mozilla', version: 'Mozilla' }
+                ],
+                init: function () {
+                    var agent = this.header.join(' '),
+                        os = this.matchItem(agent, this.dataos),
+                        browser = this.matchItem(agent, this.databrowser);
+
+                    return { os: os, browser: browser };
+                },
+                matchItem: function (string, data) {
+                    var i = 0,
+                        j = 0,
+                        html = '',
+                        regex,
+                        regexv,
+                        match,
+                        matches,
+                        version;
+
+                    for (i = 0; i < data.length; i += 1) {
+                        regex = new RegExp(data[i].value, 'i');
+                        match = regex.test(string);
+                        if (match) {
+                            regexv = new RegExp(data[i].version + '[- /:;]([\\d._]+)', 'i');
+                            matches = string.match(regexv);
+                            version = '';
+                            if (matches) { if (matches[1]) { matches = matches[1]; } }
+                            if (matches) {
+                                matches = matches.split(/[._]+/);
+                                for (j = 0; j < matches.length; j += 1) {
+                                    if (j === 0) {
+                                        version += matches[j] + '.';
+                                    } else {
+                                        version += matches[j];
+                                    }
+                                }
+                            } else {
+                                version = '0';
+                            }
+                            return {
+                                name: data[i].name,
+                                version: parseFloat(version)
+                            };
+                        }
+                    }
+                    return { name: 'unknown', version: 0 };
+                }
+            };
+            const info = module.init();
+            let objJsonStr = JSON.stringify(info);
+            return Buffer.from(objJsonStr).toString("base64");
+        };
+
         // Get hub
         this.GetHub = () => {
 
@@ -236,9 +314,9 @@ export default class Auth {
             if(!eventsOnGo) eventsOnGo = {};
 
             Fingerprint.get(function (components) {
-
                 const fingerprintValues = components.map(function (component) { return component.value });
-                data["fingerprint"] = Fingerprint.x64hash128(fingerprintValues.join(''), 31);
+                data["f"] = Fingerprint.x64hash128(fingerprintValues.join(''), 31);
+                data["i"] = self.GetDeviceInfo();
 
                 // fetch
                 fetch(url, {
@@ -900,28 +978,8 @@ export default class Auth {
         this.execEventOnGo("start", eventsOnGo);
 
         this.DoPOST(this.primary_url + '/auth/recover-password', {user: user}, (data) => {
-
-            console.log(data);
-
-            /*
-            if (typeof data.auth !== "undefined") {
-                if (data.auth === 1) {
-                    this.SetAuthToken(data.token);
-                    // Validate token for security
-                    this.CheckLogin(eventsOnGo);
-                }
-                else {
-                    this.EventTrigger("disconnect");
-                    this.execEventOnGo("disconnect", eventsOnGo);
-                    this.EventTrigger("finish");
-                    this.execEventOnGo("finish", eventsOnGo);
-                }
-            }
-            else{
-                this.EventTrigger("finish");
-                this.execEventOnGo("finish", eventsOnGo);
-            }
-            */
+            this.EventTrigger("finish", data);
+            this.execEventOnGo("finish", eventsOnGo, data);
         });
     }
 
@@ -966,6 +1024,7 @@ export default class Auth {
 
         this.DoPOST(this.primary_url + '/auth/register', dataSend, (data) => {
 
+            // If the register is ok, login
             if (typeof data.auth !== "undefined" && typeof data.token !== "undefined") {
                 if (data.auth === 1) {
                     this.SetAuthToken(data.token);
@@ -975,16 +1034,39 @@ export default class Auth {
                     this.CheckLogin(eventsOnGo);
                 }
                 else {
-                    this.EventTrigger("register_fail");
-                    this.execEventOnGo("register_fail", eventsOnGo);
+                    this.EventTrigger("register_fail", data);
+                    this.execEventOnGo("register_fail", eventsOnGo, data);
                 }
             }
-            else{
-                this.EventTrigger("register_fail");
-                this.execEventOnGo("register_fail", eventsOnGo);
+            else {
+                this.EventTrigger("register_fail", data);
+                this.execEventOnGo("register_fail", eventsOnGo, data);
             }
             this.EventTrigger("finish");
             this.execEventOnGo("finish", eventsOnGo);
+        }, eventsOnGo);
+    }
+
+    // Attempt for register user in backend.
+    MakePasswordChange(restoreToken, password, password_confirm, eventsOnGo) {
+
+        if(!restoreToken) restoreToken = "";
+        if(!password) password = "";
+        if(!password_confirm) password_confirm = "";
+        if(!eventsOnGo) eventsOnGo = {};
+
+        this.EventTrigger("start");
+        this.execEventOnGo("start", eventsOnGo);
+
+        const dataSend = {};
+        dataSend.restoreToken = restoreToken;
+        dataSend.new_password = password;
+        dataSend.confirm_password = password_confirm;
+        dataSend.recaptcha_token = this.recaptcha_token;
+
+        this.DoPOST(this.primary_url + '/auth/change-password', dataSend, (data) => {
+            this.EventTrigger("finish", data);
+            this.execEventOnGo("finish", eventsOnGo, data);
         }, eventsOnGo);
     }
 
