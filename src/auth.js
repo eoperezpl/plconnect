@@ -1089,6 +1089,8 @@ export default class Auth {
             {origin: /:\/\/(www\.)?hagomitarea.com$/, allow: access},
             {origin: /\.revistaamiga.com$/, allow: access},
             {origin: /:\/\/(www\.)?revistaamiga.com$/, allow: access},
+            {origin: /\.prensalibre.alley.ws$/, allow: access},
+            {origin: /:\/\/(www\.)?prensalibre.alley.ws$/, allow: access},
         ]);
     }
 
