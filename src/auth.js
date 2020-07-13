@@ -388,9 +388,14 @@ export default class Auth {
             if(!params) params = false;
             if(eventOnGoTree && typeof eventOnGoTree[eventName] !== "undefined") {
                 const token = this.FindAuthToken();
-                if(!params) params = this.parseJwt(token);
-
-                eventOnGoTree[eventName](params);
+                if(!params) params = null;
+                const tokenDecode = this.parseJwt(token);
+                let paramsTmp = {};
+                if (typeof params === "object") {
+                    paramsTmp = params;
+                }
+                const paramsSend = {...tokenDecode, ...paramsTmp }
+                eventOnGoTree[eventName](paramsSend);
             }
         };
 
@@ -509,10 +514,13 @@ export default class Auth {
         const token = this.FindAuthToken();
         if(!params) params = null;
 
-        if (params === null) {
-            params = this.parseJwt(token);
+        const tokenDecode = this.parseJwt(token);
+        let paramsTmp = {};
+        if (typeof params === "object") {
+            paramsTmp = params;
         }
-        this.execEvent(event, params);
+        const paramsSend = {...tokenDecode, ...paramsTmp }
+        this.execEvent(event, paramsSend);
     }
 
     // Check if an user is logged in the device
@@ -550,8 +558,8 @@ export default class Auth {
                         }
                         // Fire events
                         this.SendMsg("** User connected **");
-                        this.EventTrigger("connect");
-                        this.execEventOnGo("connect", eventsOnGo);
+                        this.EventTrigger("connect", {tinyPass: data.tinyPass});
+                        this.execEventOnGo("connect", eventsOnGo, {tinyPass: data.tinyPass});
                     }
                     else {
                         this.EventTrigger("disconnect");
