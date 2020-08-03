@@ -191,13 +191,12 @@ export default class Auth {
                     catch(e) {
                         self.SendMsg("Error getting token, please try again");
                     }
+
                     // Execute function start
-                    if(typeof self.enqueue_functions.start === "function"){
+                    if(typeof self.enqueue_functions.start === "function") {
                         const tmpFunc = self.enqueue_functions.start;
                         // Exec start
                         tmpFunc();
-                        // Exec finish event
-                        self.EventTrigger("finish");
                     }
                 }
             };
