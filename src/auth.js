@@ -148,6 +148,31 @@ export default class Auth {
             return Buffer.from(objJsonStr).toString("base64");
         };
 
+        this.getCookie = (name) => {
+            const v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
+            const unparsedCookie = v ? v[2] : null;
+            let cookie = "";
+
+            try {
+                cookie = atob(unparsedCookie);
+            }
+            catch (e) {
+                cookie = null;
+            }
+            return cookie;
+        }
+
+        this.setCookie = (name, value, days) => {
+            const d = new Date;
+            d.setTime(d.getTime() + 24*60*60*1000*days);
+            const cookieContent = btoa(value);
+            document.cookie = name + "=" + cookieContent + ";path=/;expires=" + d.toUTCString();
+        }
+
+        this.deleteCookie = (name) => {
+            this.setCookie(name, '', -1);
+        }
+
         // Get hub
         this.GetHub = () => {
 
@@ -163,7 +188,7 @@ export default class Auth {
                         }
                         self.started = true;
                     }
-                    catch(e){
+                    catch(e) {
                         self.SendMsg("Error getting token, please try again");
                     }
                     // Execute function start
@@ -178,21 +203,26 @@ export default class Auth {
             };
 
             if (window.location.hostname === this.sso_domain) {
-                const data = localStorage.getItem("sso-data");
+                const data = self.getCookie("sso-data");
                 parseData(data);
             }
-            else{
-                const storage = new CrossStorageClient(this.hub_url);
-                storage.onConnect().then(function() {
-                    return storage.get('sso-data');
-                }).then(function(res) {
-                    // Parse data
-                    parseData(res);
-                }).catch(function(err) {
-                    // Handle error
-                    console.log(err);
-                }).then(function() {
-                    storage.close();
+            else {
+
+                // Create iframe for sso
+                const iframe = document.createElement("iframe");
+                iframe.setAttribute("src", this.hub_url);
+                iframe.style.display = "none";
+                document.body.appendChild(iframe);
+
+                const eventMethod = window.addEventListener ? "addEventListener" : "attachEvent";
+                const eventer = window[eventMethod];
+                const messageEvent = eventMethod === "attachEvent" ? "onmessage" : "message";
+
+                eventer(messageEvent, function (e) {
+                    if (e.origin === 'https://sso.prensalibre.com') {
+                        const data = e.data;
+                        parseData(data);
+                    }
                 });
             }
         };
@@ -200,17 +230,9 @@ export default class Auth {
         // Update hub
         this.UpdateHub = () => {
             const self = this;
-
             // Update hub only works with sso because all domains is only read
             if (window.location.hostname === this.sso_domain) {
-                localStorage.setItem('sso-data', JSON.stringify(self.data));
-
-                /*const storage = new CrossStorageClient(this.hub_url);
-                storage.onConnect().then(function() {
-                    return storage.set('sso-data', JSON.stringify(self.data));
-                }).then(function() {
-                    storage.close();
-                });*/
+                self.setCookie('sso-data', JSON.stringify(self.data), 180);
             }
         };
 
@@ -394,7 +416,7 @@ export default class Auth {
                 if (typeof params === "object") {
                     paramsTmp = params;
                 }
-                const paramsSend = {...tokenDecode, ...paramsTmp }
+                const paramsSend = Object.assign({}, tokenDecode, paramsTmp);
                 eventOnGoTree[eventName](paramsSend);
             }
         };
@@ -519,7 +541,7 @@ export default class Auth {
         if (typeof params === "object") {
             paramsTmp = params;
         }
-        const paramsSend = {...tokenDecode, ...paramsTmp }
+        const paramsSend = Object.assign({}, tokenDecode, paramsTmp);
         this.execEvent(event, paramsSend);
     }
 
@@ -1081,25 +1103,10 @@ export default class Auth {
     // Create an PL api Hub, this is the storage for app, this uses only in sso.
     EnableSsoHub() {
         // Config s.t. subdomains can get, but only the root domain can set and del
-        const access = ['get', 'set', 'del'];
-        CrossStorageHub.init([
-            {origin: /\.sso.prensalibre.com$/, allow: access},
-            {origin: /:\/\/(www\.)?sso.prensalibre.com$/, allow: access},
-            {origin: /\.pagos.prensalibre.com$/, allow: access},
-            {origin: /:\/\/(www\.)?pagos.prensalibre.com$/, allow: access},
-            {origin: /\.prensalibre.com$/, allow: access},
-            {origin: /:\/\/(www\.)?prensalibre.com$/, allow: access},
-            {origin: /\.guatevision.com$/, allow: access},
-            {origin: /:\/\/(www\.)?guatevision.com$/, allow: access},
-            {origin: /\.clasificadospl.com$/, allow: access},
-            {origin: /:\/\/(www\.)?clasificadospl.com$/, allow: access},
-            {origin: /\.hagomitarea.com$/, allow: access},
-            {origin: /:\/\/(www\.)?hagomitarea.com$/, allow: access},
-            {origin: /\.revistaamiga.com$/, allow: access},
-            {origin: /:\/\/(www\.)?revistaamiga.com$/, allow: access},
-            {origin: /\.prensalibre.alley.ws$/, allow: access},
-            {origin: /:\/\/(www\.)?prensalibre.alley.ws$/, allow: access},
-        ]);
+        const data = this.getCookie("sso-data");
+        if (typeof parent !== "undefined") {
+            parent.postMessage(data, "*");
+        }
     }
 
     // Retrive the user id from token
