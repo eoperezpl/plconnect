@@ -1,7 +1,4 @@
-
 import Fingerprint from 'fingerprintjs2';
-import {CrossStorageHub} from 'cross-storage';
-import {CrossStorageClient} from 'cross-storage';
 
 export default class Auth {
 
@@ -558,7 +555,6 @@ export default class Auth {
 
         // If token exists
         if (token) {
-
             this.DoPOST(this.primary_url + '/auth/check', {token: token}, (data) => {
 
                 if (typeof data.auth !== "undefined") {
@@ -593,6 +589,9 @@ export default class Auth {
             });
         }
         else {
+            // check auth login if the user is disconnect
+            this.AuthSocialLogin();
+
             // Call on disconnect
             this.EventTrigger("disconnect");
             this.execEventOnGo("disconnect", eventsOnGo);
@@ -600,9 +599,6 @@ export default class Auth {
             // Call on_finish_validation
             this.EventTrigger("finish");
             this.execEventOnGo("finish", eventsOnGo);
-
-            // check auth login if the user is disconnect
-            this.AuthSocialLogin();
         }
     };
 
@@ -790,6 +786,35 @@ export default class Auth {
         if(!action) action = "start";
         if(!eventsOnGo) eventsOnGo = {};
 
+        // Dialog for mobile
+        const emergentNotice = document.createElement('div');
+        emergentNotice.style.cssText = "position: fixed; z-index: 9999; width: 100vw; height: 100vh; left: 0; top: 0; display: none; text-align: center; background-color: rgba(0, 0, 0, 0.70)";
+
+        const emergentNoticeContainer = document.createElement('div');
+        emergentNoticeContainer.style.cssText = "width: 100%; max-width: 345px; background: white; padding: 20px; margin: auto; position: absolute; left: 50%; top: 30%; transform: translate(-50%, -50%); -webkit-border-radius: 5px; -moz-border-radius: 5px; border-radius: 5px;";
+
+        const emergentNoticeHeader = document.createElement('header');
+        emergentNoticeHeader.innerHTML = "<div>Se abrirá una ventana emergente para iniciar sesión</div>";
+        emergentNoticeHeader.style.cssText = "font-size: 1em; margin-bottom: 10px";
+
+        const emergentNoticeOk = document.createElement('button');
+        emergentNoticeOk.style.cssText = "margin: auto; width: 100%; padding: 5px; margin: 5px; background: #009cfc; color: white; border: none; -webkit-border-radius: 3px; -moz-border-radius: 3px; border-radius: 3px;";
+        emergentNoticeOk.innerHTML = "Aceptar";
+
+        const emergentNoticeCancel = document.createElement('button');
+        emergentNoticeCancel.style.cssText = "margin: auto; width: 100%; padding: 5px; margin: 5px; background: #9F9F9F; color: white; border: none; -webkit-border-radius: 3px; -moz-border-radius: 3px; border-radius: 3px;";
+        emergentNoticeCancel.innerHTML = "Cancelar";
+        emergentNoticeCancel.onclick = () => {
+            emergentNotice.style.display = "none";
+        }
+
+        // append to body
+        emergentNoticeContainer.appendChild(emergentNoticeHeader);
+        emergentNoticeContainer.appendChild(emergentNoticeOk);
+        emergentNoticeContainer.appendChild(emergentNoticeCancel);
+        emergentNotice.appendChild(emergentNoticeContainer);
+        document.body.appendChild(emergentNotice);
+
         // Head for async scripts
         var head = document.getElementsByTagName("head");
 
@@ -808,6 +833,7 @@ export default class Auth {
                 self.EventTrigger("error", "Tu navegador tiene habilitado el bloqueo de contenido, debes desactivarlo para poder iniciar sesión con Facebook");
                 self.execEventOnGo("error", eventsOnGo);
                 self.EventTrigger("finish");
+                self.execEventOnGo("finish", eventsOnGo);
             };
             s.onload = () => {
 
@@ -817,7 +843,7 @@ export default class Auth {
                         appId            : '1044051069317309',
                         autoLogAppEvents : true,
                         xfbml            : true,
-                        version          : 'v3.3'
+                        version          : 'v7.0'
                     });
                 };
 
@@ -836,17 +862,22 @@ export default class Auth {
                             handleFb(response.authResponse);
                         }
                         else {
-                            // I need start session and authorize
-                            FB.login(function(response) {
-                                handleFb(response.authResponse);
-                            }, {scope: 'public_profile,email'});
+                            emergentNotice.style.display = "block";
+                            emergentNoticeOk.onclick = () => {
+                                // I need start session and authorize
+                                FB.login(function(response) {
+                                    handleFb(response.authResponse);
+                                }, {scope: 'public_profile,email'});
+                                emergentNotice.style.display = "none";
+                            }
+                            self.EventTrigger("finish");
+                            self.execEventOnGo("finish", eventsOnGo);
                         }
                     }
                     else {
                         this.SendMsg("Error with facebook requests");
                         self.EventTrigger("finish");
                     }
-                    // self.EventTrigger("finish");
                 });
             };
             // If head is ok, add script
@@ -904,28 +935,34 @@ export default class Auth {
                     }).then(function(auth2) {
 
                         // Sign the user in, and then retrieve their ID.
-                        auth2.signIn().then(function() {
-                            try {
-                                const authUser = auth2.currentUser.get();
-                                const userId = authUser.getId();
-                                const accessToken = authUser.getAuthResponse().access_token;
-                                const idToken = authUser.getAuthResponse().id_token;
+                        emergentNotice.style.display = "block";
+                        emergentNoticeOk.onclick = () => {
+                            auth2.signIn().then(function() {
+                                try {
+                                    const authUser = auth2.currentUser.get();
+                                    const userId = authUser.getId();
+                                    const accessToken = authUser.getAuthResponse().access_token;
+                                    const idToken = authUser.getAuthResponse().id_token;
 
-                                if (userId !== "" && accessToken !== "" && idToken !== "") {
-                                    const data = {
-                                        user_id: userId,
-                                        accessToken: accessToken,
-                                        idToken: idToken,
-                                    };
-                                    self.SetSocialData(data, social_network);
-                                    self.AuthSocialLogin();
+                                    if (userId !== "" && accessToken !== "" && idToken !== "") {
+                                        const data = {
+                                            user_id: userId,
+                                            accessToken: accessToken,
+                                            idToken: idToken,
+                                        };
+                                        self.SetSocialData(data, social_network);
+                                        self.AuthSocialLogin();
+                                    }
                                 }
-                            }
-                            catch(e) {
-                                self.SendMsg("Error to sign with Google");
-                                self.EventTrigger("finish");
-                            }
-                        });
+                                catch(e) {
+                                    self.SendMsg("Error to sign with Google");
+                                    self.EventTrigger("finish");
+                                }
+                            });
+                            emergentNotice.style.display = "none";
+                        }
+                        self.EventTrigger("finish");
+                        self.execEventOnGo("finish", eventsOnGo);
                     });
                 });
             };
@@ -1127,11 +1164,12 @@ export default class Auth {
            return false;
         }
         // Exec start callback
-        this.EventTrigger("start");
+        // this.EventTrigger("start");
         this.enqueue_functions.start = callback;
 
         if(this.started) {
             callback();
         }
+        // this.EventTrigger("finish");
     }
 }
