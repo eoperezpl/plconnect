@@ -1068,13 +1068,14 @@ export default class Auth {
     }
 
     // Attempt for register user in backend.
-    MakeRegister(user, password, password_confirm, name, lastname, eventsOnGo) {
+    MakeRegister(user, password, password_confirm, name, lastname, birthdate, eventsOnGo) {
 
         if(!user) user = "";
         if(!password) password = "";
         if(!password_confirm) password_confirm = "";
         if(!name) name = "";
         if(!lastname) lastname = "";
+        if(!birthdate) birthdate = "";
         if(!eventsOnGo) eventsOnGo = {};
 
         this.EventTrigger("start");
@@ -1086,6 +1087,7 @@ export default class Auth {
         dataSend.password_confirm = password_confirm;
         dataSend.name = name;
         dataSend.lastname = lastname;
+        dataSend.birthdate = birthdate;
         dataSend.recaptcha_token = this.recaptcha_token;
 
         this.DoPOST(this.primary_url + '/auth/register', dataSend, (data) => {
