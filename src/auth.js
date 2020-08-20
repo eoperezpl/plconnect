@@ -163,7 +163,7 @@ export default class Auth {
             const d = new Date;
             d.setTime(d.getTime() + 24*60*60*1000*days);
             const cookieContent = btoa(value);
-            document.cookie = name + "=" + cookieContent + ";path=/;expires=" + d.toUTCString();
+            document.cookie = name + "=" + cookieContent + ";path=/;secure;SameSite=None;expires=" + d.toUTCString();
         }
 
         this.deleteCookie = (name) => {
