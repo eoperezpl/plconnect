@@ -463,8 +463,13 @@ export default class Auth {
 
         // Set back url
         const urlParams = new URLSearchParams(window.location.search);
-        const back_uri = urlParams.get('back');
+        let back_uri = urlParams.get('back');
+        const fromFpp = urlParams.get('fpp');
         const skip_polls = urlParams.get('skip_polls');
+
+        if (fromFpp === "true") {
+            back_uri = atob(back_uri);
+        }
 
         // Set skip polls
         if (skip_polls !== null) {
