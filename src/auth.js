@@ -463,8 +463,13 @@ export default class Auth {
 
         // Set back url
         const urlParams = new URLSearchParams(window.location.search);
-        const back_uri = urlParams.get('back');
+        let back_uri = urlParams.get('back');
+        const fromFpp = urlParams.get('fpp');
         const skip_polls = urlParams.get('skip_polls');
+
+        if (fromFpp === "true") {
+            back_uri = atob(back_uri);
+        }
 
         // Set skip polls
         if (skip_polls !== null) {
@@ -621,16 +626,37 @@ export default class Auth {
             this.SendMsg("Redirecting to \""+backUrl+"\".");
             this.SetAuthBack("");
 
+            const appToken = this.FindAuthToken();
+            const tokenDecode = this.parseJwt(appToken);
+            const ahoraAppData = {
+                nombre: tokenDecode.name + ' ' + tokenDecode.lastname,
+                email: tokenDecode.email,
+                avatar: tokenDecode.genre,
+                red: tokenDecode.iss
+            };
+
             if(!pattern.test(backUrl)) {
-                window.location.href = backUrl;
+                if(backUrl.indexOf("ahoraplapp.prensalibre.com") > -1){
+                    window.location.href = 'ahoraplapp://ahorapl.prensalibre.com/fromsso?token='+ btoa(JSON.stringify(ahoraAppData));
+                }else {
+                    window.location.href = backUrl;
+                }
             }
             else{
-                window.location.href = this.getValidUrl(backUrl);
+                if(backUrl.indexOf("ahoraplapp.prensalibre.com") > -1){
+                    window.location.href = 'ahoraplapp://ahorapl.prensalibre.com/fromsso?token='+ btoa(JSON.stringify(ahoraAppData));
+                }else{
+                    window.location.href = this.getValidUrl(backUrl);
+                }
+
             }
         }
         else {
             //window.location.href = this.getValidUrl(urlBack);
             this.SendMsg("URL Back is not config");
+            if(backUrl.indexOf("ahorapl.prensalibre.com") > -1){
+                window.location.href = 'ahoraplapp://ahorapl.prensalibre.com/fromsso?token='+ btoa(usrInfo);
+            }
         }
     }
 
@@ -768,6 +794,32 @@ export default class Auth {
                     data.opt = 'check_token';
                     data.social = socials_data.social;
                     data.oauth_token = oauth_token;
+                    console.log(data);
+
+                    // Send to verify
+                    verifyTokens(data);
+                }
+            }
+            // Apple
+            else if(socials_data.social === "apple"){
+
+                let idToken = null;
+
+                if (typeof socials_data.idToken !== "undefined" && typeof socials_data.idToken !== "undefined") {
+                    idToken = socials_data.idToken;
+                }
+
+                if (idToken !== null) {
+
+                    const data = {};
+                    data.opt = 'check_token';
+                    data.social = socials_data.social;
+                    data.idToken = socials_data.idToken;
+
+                    if( typeof socials_data.firstName !== "undefined"){
+                        data.firstName = socials_data.firstName;
+                        data.lastName = socials_data.lastName;
+                    }
 
                     // Send to verify
                     verifyTokens(data);
@@ -995,6 +1047,50 @@ export default class Auth {
                     self.EventTrigger("finish");
                 }
             });
+        }
+        else if(social_network === "apple"){
+            this.EventTrigger("start");
+            /*let redirectURL = this.data.back;
+            if(redirectURL.indexOf('http') === -1){
+                redirectURL = this.sso_url + this.data.back;
+            }*/
+
+            AppleID.auth.init({
+                clientId : 'com.pl.sso.service',
+                scope : 'name email',
+                redirectURI : this.sso_url + '/biblioteca',
+                usePopup : true
+            });
+
+            try {
+                AppleID.auth.signIn();
+                document.addEventListener('AppleIDSignInOnSuccess', (data) => {
+                    const userData = {
+                        idToken: data.detail.authorization.id_token,
+                    }
+
+                    if(typeof data.detail.user !== "undefined"){
+                        userData['firstName'] = data.detail.user.name.firstName;
+                        userData['lastName'] = data.detail.user.name.lastName;
+                        userData['email'] = data.detail.user.email;
+                    }
+
+                    self.SetSocialData(userData, social_network);
+                    self.AuthSocialLogin();
+                });
+
+                document.addEventListener('AppleIDSignInOnFailure', (error) => {
+                    self.SendMsg("Error to sign with Apple");
+                    self.EventTrigger("finish");
+                });
+
+            } catch ( error ) {
+                self.SendMsg("Error to sign with Apple");
+                self.EventTrigger("finish");
+            }
+
+            self.SetSocialData(userData, social_network);
+            self.AuthSocialLogin();
         }
         else{
             this.SendMsg("Social '"+social_network+"' network not available");
