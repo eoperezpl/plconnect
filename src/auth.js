@@ -521,6 +521,33 @@ export default class Auth {
         this.UpdateHub();
     };
 
+    //remove Saved Account
+    RemoveSavedAccount(email) {
+
+        const accounts = this.AccountsFind();
+
+        let accountsToSave = {};
+
+        if (accounts !== false && Object.keys(accounts).length > 0) {
+            Object.keys(accounts).map(function(key, index) {
+                if(key !== email){
+                    accountsToSave[key] = accounts[key];
+                }
+            });
+        }
+
+        // Save all
+        let dataToSave = "";
+        try {
+            dataToSave = JSON.stringify(accountsToSave);
+        }
+        catch(e){
+            dataToSave = "";
+        }
+        this.data.saved_accounts = dataToSave;
+        this.UpdateHub();
+    }
+
     // Set any event callback
     Event(event, callbackEvent) {
 
